@@ -9991,7 +9991,8 @@ var P=[].slice.call(stage.querySelectorAll('.piece')).map(function(el,i){
 var Wv=1920, Hv=1080, zoom=1, mL=0, mT=0, R={l:0,t:0,r:1920,b:1080};
 var active=false, engine=null, walls=[], queue=[], running=false, last=0, acc=0, simT=0, nextRel=0, calm=0, topZ=P.length+1;
 var FIXED=1000/60, drag=null;
-var FALL_ON='scroll';   // 'scroll' = on the first scroll / swipe, 'load' = the moment the page opens
+var FALL_ON='load';     // 'load' = the pieces drop by themselves as soon as the page appears, 'scroll' = wait for the first scroll / swipe
+var FALL_DELAY=450;     // ms between the pieces appearing and letting go
 
 function render(p){ p.el.style.transform='translate('+(p.x-p.px).toFixed(2)+'px,'+(p.y-p.py).toFixed(2)+'px) rotate('+p.a.toFixed(4)+'rad)'; }
 
@@ -10156,7 +10157,7 @@ addEventListener('touchmove',function(e){ if(ty!==null&&!onPiece&&Math.abs(e.tou
 addEventListener('resize',layout);
 layout();
 requestAnimationFrame(function(){document.documentElement.classList.add('ready');});
-if(FALL_ON==='load') setTimeout(activate,500);
+if(FALL_ON==='load') setTimeout(activate,FALL_DELAY);
 
 window.__explore={P:P,R:function(){return R;},activate:activate,layout:layout,
   tick:function(ms){ var n=Math.round(ms/FIXED); for(var i=0;i<n;i++) stepOnce(); draw(); },
