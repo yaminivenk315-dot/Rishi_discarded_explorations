@@ -9991,6 +9991,7 @@ var P=[].slice.call(stage.querySelectorAll('.piece')).map(function(el,i){
 var Wv=1920, Hv=1080, zoom=1, mL=0, mT=0, R={l:0,t:0,r:1920,b:1080};
 var active=false, engine=null, walls=[], queue=[], running=false, last=0, acc=0, simT=0, nextRel=0, calm=0, topZ=P.length+1;
 var FIXED=1000/60, drag=null;
+var FALL_ON='scroll';   // 'scroll' = on the first scroll / swipe, 'load' = the moment the page opens
 
 function render(p){ p.el.style.transform='translate('+(p.x-p.px).toFixed(2)+'px,'+(p.y-p.py).toFixed(2)+'px) rotate('+p.a.toFixed(4)+'rad)'; }
 
@@ -10055,34 +10056,30 @@ function makeBody(p){
   if(dx||dy) Body.translate(b,{x:dx,y:dy});
   return b;
 }
-function activate(){                                      // first scroll: everything lets go
+function activate(){                                      // first scroll: everything lets go at once
   if(active) return; active=true;
-  engine=Engine.create({positionIterations:10,velocityIterations:8});
-  engine.gravity.x=0; engine.gravity.y=1.35;
+  engine=Engine.create({positionIterations:8,velocityIterations:6});
+  engine.gravity.x=0; engine.gravity.y=1.5;
   rebuildWalls();
-  P.forEach(function(p){p.body=makeBody(p);p.released=false;});
-  queue=P.slice().sort(function(a,b){return b.body.bounds.max.y-a.body.bounds.max.y;});   // lowest pieces drop first, so nothing is trapped
-  nextRel=0; simT=0; if(queue.length) queue[0].wait=0;
+  P.forEach(function(p,i){
+    p.body=makeBody(p);
+    Body.setAngularVelocity(p.body,((i%5)-2)*0.0035);       // a little tumble so the fall looks alive
+    World.add(engine.world,p.body); p.released=true;
+  });
+  queue=[]; simT=0;
   start();
 }
 function release(p){
   if(p.released) return;
   World.add(engine.world,p.body); p.released=true;
-  var k=queue.indexOf(p); if(k>-1) queue.splice(k,1);
-}
-function tryRelease(){
-  var p=queue[0], others=[];
-  P.forEach(function(q){ if(q.released) others.push(q.body); });
-  var blocked=others.length&&Query.collides(p.body,others).length>0;
-  if(!blocked||simT-p.wait>2200){
-    release(p); nextRel=simT+55;
-    if(queue.length) queue[0].wait=simT+55;
-  }
 }
 function stepOnce(){
   simT+=FIXED;
-  if(queue.length&&simT>=nextRel) tryRelease();
   Engine.update(engine,FIXED);
+  P.forEach(function(p){                                   // keep the pile calm even when pieces start overlapping
+    if(!p.released) return; var v=p.body.velocity, sp=Math.sqrt(v.x*v.x+v.y*v.y);
+    if(sp>38) Body.setVelocity(p.body,{x:v.x*38/sp,y:v.y*38/sp});
+  });
 }
 function draw(){
   var moving=false;
@@ -10159,6 +10156,7 @@ addEventListener('touchmove',function(e){ if(ty!==null&&!onPiece&&Math.abs(e.tou
 addEventListener('resize',layout);
 layout();
 requestAnimationFrame(function(){document.documentElement.classList.add('ready');});
+if(FALL_ON==='load') setTimeout(activate,500);
 
 window.__explore={P:P,R:function(){return R;},activate:activate,layout:layout,
   tick:function(ms){ var n=Math.round(ms/FIXED); for(var i=0;i<n;i++) stepOnce(); draw(); },
